@@ -1,6 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
-
+const Item = require("./models/Items");
 const app = express();
 
 app.use(express.json());
@@ -9,29 +9,39 @@ mongoose.connect("mongodb://127.0.0.1:27017/myapp")
     .then(() => console.log("MongoDB connected"))
     .catch(err => console.log(err));
 
-
-const items = [
-    { id: 1, name: "Paper Towels", quantity: 3 },
-    { id: 2, name: "Bananas", quantity: 6 },
-    { id: 3, name: "Chicken", quantity: 2 },
-];
-
-app.get("/api/items", (req, res) => {
-    res.json(items);
+app.get("/api/items", async (req, res) => {
+    try {
+        const items = await Item.find();
+        res.json(items);
+    } catch (error) {
+        res.status(500).json({
+            message: "Error fetching items",
+            error: error.message
+        });
+    }
+    
 });
 
-app.post("/api/items", (req, res) => {
-    const newItem = {
-        id: items.length + 1,
-        name: req.body.name,
-        quantity: req.body.quantity
-    };
-    items.push(newItem);
-    res.json({
-        message: "Item added!",
-        item: newItem
-    });
-})
+app.post("/api/items", async (req, res) => {
+    try {
+        const newItem = await Item.create({
+            name: req.body.name,
+            quantity: req.body.quantity
+        });
+
+        res.json({
+            message: "Item added!",
+            item: newItem
+
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error adding item",
+            error: error.message
+        });
+    }
+});
 
 app.get("/", (req, res) => {
     res.send("I DID IT");
@@ -50,39 +60,55 @@ app.get("/love", (req, res) => {
     res.send("Andrew Loves Vince!!!");
 });
 
-app.delete("/api/items/:id", (req, res) => {
-    const id = parseInt(req.params.id);
+app.delete("/api/items/:id", async (req, res) => {
+    try {
+        const deletedItem = await Item.findByIdAndDelete(req.params.id);
 
-    const index = items.findIndex(item => item.id === id);
+        if (deletedItem) {
+            res.json({ message: "Item Deleted", item: deletedItem });
+        } else {
+            res.status(404).json({ message: "Item not found"});
 
-    if (index !== -1) {
-        const deletedItem = items.splice(index, 1);
-        res.json({message: "Item deleted", item: deletedItem});
-    }   else {
-        res.status(404).json({message: "item not found lo siento"})
+        }
+    } catch (error) {
+        res.status(500).json({
+            message: "Error deleting item",
+            error: error.message
+
+        });
     }
+        
+        
     
-    
+
 });
 
-app.put("/api/items/:id", (req, res) => {
-    const id = parseInt(req.params.id);
+app.put("/api/items/:id", async (req, res) => {
+    try {
+        const updatedItem = await Item.findByIdAndUpdate(
+            req.params.id,
+            {
+                name: req.body.name,
+                quantity: req.body.quantity
+            },
+            { new: true }
+        );
 
-    const item = items.find(item => item.id === id);
-
-    if (item) {
-        item.name = req.body.name || item.name;
-        item.quantity = req.body.quantity || item.quantity;
-
-        res.json({
-            message: "Item updated",
-            item: item
+        if (updatedItem) {
+            res.json({
+                message: "Item updated",
+                item: updatedItem
+            });
+        } else {
+            res.status(404).json({ message: "Item not found" });
+        }
+    } catch (error) {
+        res.status(500).json({
+            message: "Error updating item",
+            error: error.message
         });
-    } else {
-        res.status(404).json({message: "item not foound"});
     }
-    
-}); 
+});
 
 app.listen(3000, () => {
     console.log("Server running on port 3000");
