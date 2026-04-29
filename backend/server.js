@@ -2,12 +2,15 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const Item = require("./models/Items");
+const cors = require("cors");
 
 // create the Express application instance
 const app = express();
 
 // middleware to parse incoming JSON requests (makes req.body usable)
 app.use(express.json());
+
+app.use(cors());
 
 // connect to local MongoDB database called "myapp"
 mongoose.connect("mongodb://127.0.0.1:27017/myapp")
